@@ -1,0 +1,129 @@
+name: WB → Google Sheets (все скрипты)
+
+on:
+  workflow_dispatch:
+    inputs:
+      script:
+        description: "Какой скрипт запустить"
+        required: true
+        default: "все"
+        type: choice
+        options:
+          - все
+          - заказы_месяц
+          - заказы_неделя
+          - реклама
+          - реклама_фин
+          - фин_отчеты
+
+  schedule:
+    # Заказы за месяц — 2-го числа в 06:00 МСК (03:00 UTC)
+    - cron: "0 3 2 * *"
+
+jobs:
+  # ── Заказы за месяц ──────────────────────────────────────────────
+  orders-monthly:
+    name: "Заказы за месяц"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: |
+      github.event_name == 'schedule' ||
+      github.event.inputs.script == 'все' ||
+      github.event.inputs.script == 'заказы_месяц'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Запуск
+        env:
+          WB_TOKEN:       ${{ secrets.WB_TOKEN }}
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+          GOOGLE_JSON:    ${{ secrets.GOOGLE_JSON }}
+        run: python main_заказы_за_месяц_gh.py
+
+  # ── Заказы за неделю (доработка) ─────────────────────────────────
+  orders-weekly:
+    name: "Заказы за неделю"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: |
+      github.event.inputs.script == 'все' ||
+      github.event.inputs.script == 'заказы_неделя'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Запуск
+        env:
+          WB_TOKEN:       ${{ secrets.WB_TOKEN }}
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+          GOOGLE_JSON:    ${{ secrets.GOOGLE_JSON }}
+        run: python main_заказы_доработка.py
+
+  # ── Реклама ───────────────────────────────────────────────────────
+  ads:
+    name: "Реклама"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: |
+      github.event.inputs.script == 'все' ||
+      github.event.inputs.script == 'реклама'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Запуск
+        env:
+          WB_TOKEN:       ${{ secrets.WB_TOKEN }}
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+          GOOGLE_JSON:    ${{ secrets.GOOGLE_JSON }}
+        run: python main_реклама_доработка.py
+
+  # ── Реклама финансы ───────────────────────────────────────────────
+  ads-finance:
+    name: "Реклама финансы"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: |
+      github.event.inputs.script == 'все' ||
+      github.event.inputs.script == 'реклама_фин'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Запуск
+        env:
+          WB_TOKEN:       ${{ secrets.WB_TOKEN }}
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+          GOOGLE_JSON:    ${{ secrets.GOOGLE_JSON }}
+        run: python main_реклама_фин_gh.py
+
+  # ── Финансовые отчёты ─────────────────────────────────────────────
+  fin-reports:
+    name: "Финансовые отчёты"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: |
+      github.event_name == 'schedule' ||
+      github.event.inputs.script == 'все' ||
+      github.event.inputs.script == 'фин_отчеты'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Запуск
+        env:
+          WB_TOKEN:       ${{ secrets.WB_TOKEN }}
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+          GOOGLE_JSON:    ${{ secrets.GOOGLE_JSON }}
+        run: python main_фин_отчеты_gh.py
