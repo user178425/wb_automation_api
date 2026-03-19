@@ -11,15 +11,17 @@ on:
         options:
           - все
           - заказы_месяц
+          - заказы_неделя
+          - реклама
           - реклама_фин
           - фин_отчеты
 
   schedule:
-    # Заказы за месяц — 2-го числа в 06:00 МСК (03:00 UTC)
+    # Заказы за месяц + финотчёты — 2-го числа в 06:00 МСК (03:00 UTC)
     - cron: "0 3 2 * *"
 
 jobs:
-  # ── Заказы за месяц ──────────────────────────────────────────────
+  # ── Заказы за месяц → таблица 1 ─────────────────────────────────
   orders-monthly:
     name: "Заказы за месяц"
     runs-on: ubuntu-latest
@@ -41,7 +43,7 @@ jobs:
           GOOGLE_JSON:    ${{ secrets.GOOGLE_JSON }}
         run: python main_заказы_за_месяц_gh.py
 
-  # ── Заказы за неделю (доработка) ─────────────────────────────────
+  # ── Заказы за неделю → таблица 2 ─────────────────────────────────
   orders-weekly:
     name: "Заказы за неделю"
     runs-on: ubuntu-latest
@@ -57,12 +59,12 @@ jobs:
       - run: pip install -r requirements.txt
       - name: Запуск
         env:
-          WB_TOKEN:       ${{ secrets.WB_TOKEN }}
-          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
-          GOOGLE_JSON:    ${{ secrets.GOOGLE_JSON }}
+          WB_TOKEN:         ${{ secrets.WB_TOKEN }}
+          SPREADSHEET_ID_2: ${{ secrets.SPREADSHEET_ID_2 }}
+          GOOGLE_JSON:      ${{ secrets.GOOGLE_JSON }}
         run: python main_заказы_доработка.py
 
-  # ── Реклама ───────────────────────────────────────────────────────
+  # ── Реклама → таблица 2 ───────────────────────────────────────────
   ads:
     name: "Реклама"
     runs-on: ubuntu-latest
@@ -78,12 +80,12 @@ jobs:
       - run: pip install -r requirements.txt
       - name: Запуск
         env:
-          WB_TOKEN:       ${{ secrets.WB_TOKEN }}
-          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
-          GOOGLE_JSON:    ${{ secrets.GOOGLE_JSON }}
+          WB_TOKEN:         ${{ secrets.WB_TOKEN }}
+          SPREADSHEET_ID_2: ${{ secrets.SPREADSHEET_ID_2 }}
+          GOOGLE_JSON:      ${{ secrets.GOOGLE_JSON }}
         run: python main_реклама_доработка.py
 
-  # ── Реклама финансы ───────────────────────────────────────────────
+  # ── Реклама финансы → таблица 1 ──────────────────────────────────
   ads-finance:
     name: "Реклама финансы"
     runs-on: ubuntu-latest
@@ -104,7 +106,7 @@ jobs:
           GOOGLE_JSON:    ${{ secrets.GOOGLE_JSON }}
         run: python main_реклама_фин_gh.py
 
-  # ── Финансовые отчёты ─────────────────────────────────────────────
+  # ── Финансовые отчёты → таблица 1 ────────────────────────────────
   fin-reports:
     name: "Финансовые отчёты"
     runs-on: ubuntu-latest
