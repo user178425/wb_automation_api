@@ -1,5 +1,5 @@
 name: WB → Google Sheets (все скрипты)
-
+ 
 on:
   workflow_dispatch:
     inputs:
@@ -15,13 +15,13 @@ on:
           - реклама
           - реклама_фин
           - фин_отчеты
-
+ 
   schedule:
-    # Таблица 1: 3-го числа каждого месяца в 10:00 МСК (07:00 UTC)
-    - cron: "0 7 3 * *"
+    # Таблица 1: 1-го числа каждого месяца в 08:00 МСК (05:00 UTC)
+    - cron: "0 5 1 * *"
     # Таблица 2: каждый понедельник в 06:00 МСК (03:00 UTC)
     - cron: "0 3 * * 1"
-
+ 
 jobs:
   # ── Заказы за месяц → таблица 1 ─────────────────────────────────
   orders-monthly:
@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     if: |
-      (github.event_name == 'schedule' && github.event.schedule == '0 7 3 * *') ||
+      (github.event_name == 'schedule' && github.event.schedule == '0 5 1 * *') ||
       github.event.inputs.script == 'все' ||
       github.event.inputs.script == 'заказы_месяц'
     steps:
@@ -44,14 +44,14 @@ jobs:
           SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
           GOOGLE_JSON:    ${{ secrets.GOOGLE_JSON }}
         run: python main_заказы_за_месяц_gh.py
-
+ 
   # ── Реклама финансы → таблица 1 ──────────────────────────────────
   ads-finance:
     name: "Реклама финансы"
     runs-on: ubuntu-latest
     timeout-minutes: 30
     if: |
-      (github.event_name == 'schedule' && github.event.schedule == '0 7 3 * *') ||
+      (github.event_name == 'schedule' && github.event.schedule == '0 5 1 * *') ||
       github.event.inputs.script == 'все' ||
       github.event.inputs.script == 'реклама_фин'
     steps:
@@ -66,14 +66,14 @@ jobs:
           SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
           GOOGLE_JSON:    ${{ secrets.GOOGLE_JSON }}
         run: python main_реклама_фин_gh.py
-
+ 
   # ── Финансовые отчёты → таблица 1 ────────────────────────────────
   fin-reports:
     name: "Финансовые отчёты"
     runs-on: ubuntu-latest
     timeout-minutes: 30
     if: |
-      (github.event_name == 'schedule' && github.event.schedule == '0 7 3 * *') ||
+      (github.event_name == 'schedule' && github.event.schedule == '0 5 1 * *') ||
       github.event.inputs.script == 'все' ||
       github.event.inputs.script == 'фин_отчеты'
     steps:
@@ -88,7 +88,7 @@ jobs:
           SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
           GOOGLE_JSON:    ${{ secrets.GOOGLE_JSON }}
         run: python main_фин_отчеты_gh.py
-
+ 
   # ── Заказы за неделю → таблица 2 ─────────────────────────────────
   orders-weekly:
     name: "Заказы за неделю"
@@ -110,7 +110,7 @@ jobs:
           SPREADSHEET_ID_2: ${{ secrets.SPREADSHEET_ID_2 }}
           GOOGLE_JSON:      ${{ secrets.GOOGLE_JSON }}
         run: python main_заказы_доработка.py
-
+ 
   # ── Реклама → таблица 2 ───────────────────────────────────────────
   ads:
     name: "Реклама"
@@ -132,3 +132,4 @@ jobs:
           SPREADSHEET_ID_2: ${{ secrets.SPREADSHEET_ID_2 }}
           GOOGLE_JSON:      ${{ secrets.GOOGLE_JSON }}
         run: python main_реклама_доработка.py
+ 
