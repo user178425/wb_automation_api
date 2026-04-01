@@ -72,9 +72,16 @@ else:
 
 _last_day    = monthrange(YEAR, MONTH)[1]
 DATE_FROM    = f"{YEAR:04d}-{MONTH:02d}-01"
-DATE_TO      = f"{YEAR:04d}-{MONTH:02d}-{_last_day:02d}"
+DATE_TO      = f"{YEAR:04d}-{MONTH:02d}-{_last_day:02d}"      # граница месяца — для отображения и фильтра rr_dt
 DATE_FROM_RU = f"01.{MONTH:02d}.{YEAR:04d}"
 DATE_TO_RU   = f"{_last_day:02d}.{MONTH:02d}.{YEAR:04d}"
+
+# WB API фильтрует по date_from отчёта, а не по rr_dt.
+# Строки за последние дни месяца принадлежат отчёту со следующей недели —
+# его date_from уже в следующем месяце, поэтому API их не отдаёт при dateTo=конец месяца.
+# Решение: запрашиваем с запасом +7 дней, а в агрегации отсекаем rr_dt > DATE_TO.
+_date_to_ext = datetime(YEAR, MONTH, _last_day) + timedelta(days=7)
+DATE_TO_API  = _date_to_ext.strftime("%Y-%m-%d")
 
 # ════════════════════════════════════════════════════════════════════
 #  ЗАГОЛОВКИ — 21 колонка строго по ТЗ
@@ -228,7 +235,7 @@ def fetch_reports() -> List[Dict]:
         page += 1
         params = {
             "dateFrom": DATE_FROM,
-            "dateTo":   DATE_TO,
+            "dateTo":   DATE_TO_API,   # +7 дней — захватываем строки последних дней месяца
             "rrdid":    rrdid,
             "limit":    100000,
         }
@@ -327,7 +334,10 @@ def aggregate(items: List[Dict]) -> List[Dict]:
     for item in items:
         rr_dt_raw = str(item.get("rr_dt") or "").strip()
         day_key   = rr_dt_raw[:10]  # YYYY-MM-DD
+        # Отсекаем строки вне нужного месяца (из-за запроса с запасом +7 дней)
         if not day_key or len(day_key) < 10:
+            continue
+        if not (DATE_FROM <= day_key <= DATE_TO):
             continue
 
         rt     = int(item.get("report_type") or 0)
