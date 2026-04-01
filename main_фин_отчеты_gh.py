@@ -1,17 +1,17 @@
 # ╔══════════════════════════════════════════════════════════════════╗
-# ║  WB Финансовые отчёты → Автоматизация_фин_отчеты  |  v3.0       ║
+# ║  WB Финансовые отчёты → Автоматизация_фин_отчеты  |  v3.1       ║
 # ║                                                                  ║
 # ║  Эндпоинт: GET /api/v5/supplier/reportDetailByPeriod            ║
 # ║  Период   : прошлый полный месяц (автовычисление)               ║
 # ║  Лист     : "Автоматизация_фин_отчеты"                          ║
 # ║  21 колонка строго по ТЗ                                         ║
 # ║                                                                  ║
-# ║  ИСПРАВЛЕНИЯ v3.0:                                               ║
-# ║  ✓ Группировка по rr_dt (дата операции) — один день = одна      ║
-# ║    строка, итого ~56 строк за месяц                              ║
-# ║  ✓ "No отчёта" = список уникальных realizationreport_id за день  ║
-# ║  ✓ date_from/date_to = мин/макс дат отчётов за этот день         ║
-# ║  ✓ Остальные поля суммируются по всем строкам дня                ║
+# ║  ИСПРАВЛЕНИЯ v3.1:                                               ║
+# ║  ✓ Группировка по realizationreport_id (еженедельный отчёт WB)  ║
+# ║  ✓ ~4 строки за месяц вместо ~28–56 (по дням)                   ║
+# ║  ✓ "No отчёта" = реальный realizationreport_id из API           ║
+# ║  ✓ date_from = мин. дата отчёта, date_to = макс. дата отчёта    ║
+# ║  ✓ Все суммы = итог по всем строкам отчёта                      ║
 # ╚══════════════════════════════════════════════════════════════════╝
 import os, tempfile
 
@@ -291,68 +291,48 @@ def fetch_reports() -> List[Dict]:
 #  Одна строка = один уникальный отчёт.
 # ════════════════════════════════════════════════════════════════════
 
-def _extract_oid_from_token(token: str) -> str:
-    """Извлекает oid (owner id) из JWT токена — используется как префикс № отчёта."""
-    try:
-        import base64, json as _json
-        payload = token.split('.')[1]
-        payload += '=' * (4 - len(payload) % 4)
-        data = _json.loads(base64.b64decode(payload))
-        return str(data.get("oid", ""))
-    except Exception:
-        return ""
-
-
-# Извлекаем oid один раз при загрузке модуля
-OID = _extract_oid_from_token(WB_TOKEN)
-
 
 def aggregate(items: List[Dict]) -> List[Dict]:
-    """Суммируем детализацию по каждому дню и типу отчёта (rr_dt + report_type).
-    Формат строки совпадает с ручной синей таблицей:
-      - Один день + тип = одна строка
-      - № отчёта = {oid}{yyyymmdd}  для Основного
-                   {oid}{yyyymmdd}1 для По выкупам
-      - date_from = date_to = сам rr_dt (дата дня)
-      - Итого ~56 строк за месяц (28 дней × 2 типа, но не каждый день есть оба типа)
+    """Суммируем детализацию по realizationreport_id + report_type.
+    Один realizationreport_id = один еженедельный отчёт WB.
+    За полный месяц ожидается ~4 строки (Основной) + ~4 (По выкупам).
+
+    Поля:
+      - № отчёта         = realizationreport_id (реальный ID из API)
+      - date_from        = мин. date_from среди строк отчёта
+      - date_to          = макс. date_to среди строк отчёта
+      - Дата формирования = макс. create_dt среди строк отчёта
+      - Все суммы        = сумма по всем строкам отчёта
     """
 
-    unique_rr_dt = sorted(set(str(i.get("rr_dt") or "")[:10] for i in items if i.get("rr_dt")))
-    unique_rtypes = sorted(set(str(i.get("report_type") or "") for i in items))
+    unique_rr_ids  = sorted(set(int(i.get("realizationreport_id") or 0) for i in items if i.get("realizationreport_id")))
+    unique_rtypes  = sorted(set(str(i.get("report_type") or "") for i in items))
+    print(f"  Уникальных realizationreport_id: {len(unique_rr_ids)}")
+    print(f"  Уникальных report_type         : {unique_rtypes}")
 
-
-
-    agg: Dict[str, Dict] = {}  # ключ = "rr_dt_date|report_type"
+    agg: Dict[str, Dict] = {}  # ключ = "{realizationreport_id}|{report_type}"
 
     for item in items:
-        rr_dt_raw = str(item.get("rr_dt") or "").strip()
-        day_key   = rr_dt_raw[:10]  # YYYY-MM-DD
-        if not day_key or len(day_key) < 10:
+        rr_id = int(item.get("realizationreport_id") or 0)
+        if not rr_id:
             continue
 
-        rt     = int(item.get("report_type") or 0)
-        combo  = f"{day_key}|{rt}"
+        rt    = int(item.get("report_type") or 0)
+        combo = f"{rr_id}|{rt}"
 
         if combo not in agg:
             rtype   = REPORT_TYPE_MAP.get(rt, str(rt) if rt else "")
             cur_raw = str(item.get("currency_name") or "RUB")
             cur     = CURRENCY_MAP.get(cur_raw.upper(), cur_raw)
 
-            # № отчёта: {oid}{yyyymmdd} для Основного (rt=1), {oid}{yyyymmdd}1 для По выкупам (rt=2)
-            date_compact = day_key.replace("-", "")  # 20260201
-            if rt == 2:
-                rep_id_val = f"{OID}{date_compact}1"
-            else:
-                rep_id_val = f"{OID}{date_compact}"
-
-            # date_from = date_to = сама дата дня (rr_dt)
-            day_dt_str = _fmt_period_dt(day_key)
-
             agg[combo] = {
-                "rep_id":                rep_id_val,
+                "rep_id":                str(rr_id),
                 "legal":                 LEGAL_ENTITY,
-                "date_from":             day_dt_str,
-                "date_to":               day_dt_str,
+                "_date_from_raw":        "",   # будем брать минимум
+                "_date_to_raw":          "",   # будем брать максимум
+                "date_from":             "",
+                "date_to":               "",
+                "_create_dt_raw":        "",
                 "create_dt":             _fmt_create_dt(str(item.get("create_dt") or "")),
                 "doc_type":              rtype,
                 "retail_amount":         0.0,
@@ -369,13 +349,27 @@ def aggregate(items: List[Dict]) -> List[Dict]:
                 "loyalty_bonus_sum":     0.0,
                 "deduction_date_change": 0.0,
                 "currency":              cur,
+                "_rr_id":                rr_id,
+                "_rt":                   rt,
             }
 
         a = agg[combo]
 
-        # Обновляем create_dt — берём последнее (максимальное)
+        # date_from — минимум по отчёту
+        df_raw = str(item.get("date_from") or "")[:10]
+        if df_raw and (not a["_date_from_raw"] or df_raw < a["_date_from_raw"]):
+            a["_date_from_raw"] = df_raw
+            a["date_from"]      = _fmt_period_dt(df_raw)
+
+        # date_to — максимум по отчёту
+        dt_raw = str(item.get("date_to") or "")[:10]
+        if dt_raw and (not a["_date_to_raw"] or dt_raw > a["_date_to_raw"]):
+            a["_date_to_raw"] = dt_raw
+            a["date_to"]      = _fmt_period_dt(dt_raw)
+
+        # create_dt — максимум (последняя дата формирования)
         cd = str(item.get("create_dt") or "")
-        if cd and (not a.get("_create_dt_raw") or cd > a.get("_create_dt_raw", "")):
+        if cd and (not a["_create_dt_raw"] or cd > a["_create_dt_raw"]):
             a["_create_dt_raw"] = cd
             a["create_dt"]      = _fmt_create_dt(cd)
 
@@ -401,11 +395,10 @@ def aggregate(items: List[Dict]) -> List[Dict]:
         a["loyalty_bonus_sum"]     += _n(item.get("cashback_amount"))
         a["deduction_date_change"] += 0  # _n(item.get("rebill_logistic_cost"))
 
-    # Итого к оплате + сортировка по дате, затем по типу
+    # Итого к оплате + сортировка: по типу (Основной→По выкупам), затем по date_from
     result = []
-    # Сортировка: сначала все Основной (rt=1) по дате, потом все По выкупам (rt=2) по дате
-    # combo = "YYYY-MM-DD|1" или "YYYY-MM-DD|2"
-    for combo, a in sorted(agg.items(), key=lambda x: (x[0].split("|")[1], x[0].split("|")[0])):
+    for combo, a in sorted(agg.items(),
+                           key=lambda x: (x[1]["_rt"], x[1]["_date_from_raw"])):
         a["itogo"] = (a["ppvz_for_pay"]
                       - a["delivery_rub"]
                       - a["storage_fee"]
@@ -418,7 +411,7 @@ def aggregate(items: List[Dict]) -> List[Dict]:
                       - a["deduction_date_change"])
         result.append(a)
 
-    print(f"  ▶ Строк (день × тип): {len(result)}")
+    print(f"  ▶ Строк (отчёт × тип): {len(result)}")
     return result
 
 
@@ -488,7 +481,7 @@ def write_sheet(ss: gspread.Spreadsheet, rows: List[List[str]]) -> None:
     ws.update(
         values=[[
             f"Финансовые отчёты  |  Период: {DATE_FROM_RU} – {DATE_TO_RU}  |  "
-            f"Дней: {n}  |  "
+            f"Отчётов: {n}  |  "
             f"Выгружено: {datetime.now().strftime('%d.%m.%Y %H:%M')}"
         ]],
         range_name="A1",
@@ -555,7 +548,7 @@ def main() -> None:
 
     print("\n" + "═"*60)
     print(f"  Строк детализации  : {len(items)}")
-    print(f"  Уникальных дней    : {len(rows)}")
+    print(f"  Уникальных отчётов : {len(rows)}")
     if rows:
         try:
             total = sum(float(r[19]) for r in rows)
