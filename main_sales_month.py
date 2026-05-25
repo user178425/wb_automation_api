@@ -9,7 +9,7 @@ from datetime import timedelta as _td
 from calendar import monthrange
 
 # ════════════════════════════════════════════════════════════════════
-#  КОНФИГ — из переменных окружения (GitHub Secrets)
+#  КОНФИГУРАЦИИ
 # ════════════════════════════════════════════════════════════════════
 
 WB_TOKEN       = os.environ["WB_TOKEN"]          # секрет WB_TOKEN
