@@ -1,18 +1,3 @@
-# ╔══════════════════════════════════════════════════════════════════╗
-# ║  WB Заказы (Месяц) → Автоматизация_заказы  |  v1.3             ║
-# ║                                                                  ║
-# ║  Данные берутся за полный месяц (по умолчанию — прошлый).       ║
-# ║  ✓ Лист: "Автоматизация_заказы"                                 ║
-# ║  ✓ 69 колонок строго по ТЗ                                      ║
-# ║  ✓ Блок дат — легко менять вручную                              ║
-# ║  ✓ v1.3: полный список nmId из /content/v2/get/cards/list       ║
-# ║                                                                  ║
-# ║  GITHUB VERSION:                                                 ║
-# ║  - WB_TOKEN и SPREADSHEET_ID берутся из переменных окружения    ║
-# ║  - credentials.json восстанавливается из env GOOGLE_JSON  ║
-# ║  - !pip install убран — зависимости в requirements.txt          ║
-# ╚══════════════════════════════════════════════════════════════════╝
-
 import os, json, time, tempfile, requests, gspread, pandas as pd
 from gspread.exceptions import WorksheetNotFound
 from gspread_formatting import CellFormat, TextFormat, format_cell_range
