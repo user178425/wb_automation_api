@@ -1,15 +1,3 @@
-# ╔══════════════════════════════════════════════════════════════════╗
-# ║  WB Реклама → Автоматизация_РекламаWB  |  v6.0                 ║
-# ║                                                                  ║
-# ║  Шаг 0: /adv/v1/promotion/count  — диагностика кол-ва          ║
-# ║  Шаг 1: /api/advert/v2/adverts   — список всех advertId         ║
-# ║  Шаг 2: /adv/v3/fullstats        — статистика по одному ID     ║
-# ║                                                                  ║
-# ║  Период = прошлая полная неделя (Пн–Вс) МСК, автовычисление    ║
-# ║  Колонки строго по ТЗ (13 штук)                                 ║
-# ║  ws.update(values=..., range_name=...) — без DeprecationWarning ║
-# ╚══════════════════════════════════════════════════════════════════╝
-
 import os, tempfile, time, json, requests, gspread, pytz
 from gspread.exceptions import WorksheetNotFound
 from gspread_formatting import CellFormat, TextFormat, format_cell_range
