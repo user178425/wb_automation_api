@@ -1,1 +1,1 @@
-It was created a couple of months ago so the script can not work properly because of constant wb api updates
+These scripts help you to automate the downloading of data from marketplace servers directly into Google Sheets. All you need are just a WB API key, a spreadshit ID, and you need to set up editor access for the bot in the sheet. By the way, this project was created a couple of months ago so the scripts can not work properly because of constant wb api updates.
