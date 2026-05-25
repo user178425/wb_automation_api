@@ -9,7 +9,7 @@ from calendar import monthrange
 from typing import Any, Dict, List, Optional, Tuple
 
 # ════════════════════════════════════════════════════════════════════
-#  КОНФИГ
+#  КОНФИГУРАЦИИ
 # ════════════════════════════════════════════════════════════════════
 
 WB_TOKEN       = os.environ["WB_TOKEN"]
