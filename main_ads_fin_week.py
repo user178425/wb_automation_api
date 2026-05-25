@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
 # ════════════════════════════════════════════════════════════════════
-#  КОНФИГ — из переменных окружения (GitHub Secrets)
+#  КОНФИГУРАЦИИ
 # ════════════════════════════════════════════════════════════════════
 
 WB_TOKEN       = os.environ["WB_TOKEN"]
